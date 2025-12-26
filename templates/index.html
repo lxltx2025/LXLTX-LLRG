@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>综述生成系统 v2.2</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 头部 -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1>📚 综述生成系统</h1>
+                <span class="version">v2.2</span>
+            </div>
+            <div class="header-right">
+                <span id="ollama-status" class="status-indicator">
+                    <span class="dot"></span>
+                    <span class="text">检查服务状态...</span>
+                </span>
+                <span id="model-status" class="model-badge">未选择模型</span>
+                <button class="reset-btn" id="reset-btn" title="重新开始">🔄</button>
+            </div>
+        </header>
+
+        <!-- 步骤指示器 -->
+        <div class="step-indicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">选择模型</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">范式分析</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">生成综述</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">导出结果</div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <main class="steps-container">
+            <!-- 步骤1：模型选择 -->
+            <section class="step-card active" id="step-1">
+                <div class="card-header">
+                    <h2>🤖 步骤1：选择AI模型</h2>
+                    <p class="card-desc">选择本地Ollama中已下载的模型</p>
+                </div>
+                <div class="card-body">
+                    <div class="model-grid" id="model-grid">
+                        <div class="loading-placeholder">
+                            <div class="spinner"></div>
+                            <p>正在加载模型列表...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary btn-next" id="step1-next" disabled>
+                        下一步：上传文献 →
+                    </button>
+                </div>
+            </section>
+
+            <!-- 步骤2：写作范式分析 -->
+            <section class="step-card" id="step-2">
+                <div class="card-header">
+                    <h2>📖 步骤2：写作范式分析</h2>
+                    <p class="card-desc">上传已发表的综述文献，AI将分析其写作结构、风格和逻辑</p>
+                </div>
+                <div class="card-body">
+                    <div class="upload-section">
+                        <div class="upload-zone" id="review-upload-zone">
+                            <input type="file" id="review-files" multiple accept=".pdf,.txt" hidden>
+                            <div class="upload-icon">📁</div>
+                            <h3>上传综述文献</h3>
+                            <p>支持 PDF、TXT 格式，可批量选择多个文件</p>
+                            <button class="btn btn-outline" onclick="document.getElementById('review-files').click()">
+                                选择文件
+                            </button>
+                        </div>
+                        <div class="file-list-container">
+                            <div class="file-list-header">
+                                <span>已上传文件</span>
+                                <button class="btn-text" id="clear-review-files">清空全部</button>
+                            </div>
+                            <div class="file-list" id="review-file-list">
+                                <p class="empty-text">暂无文件</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container" id="analyze-progress" style="display: none;">
+                        <div class="progress-header">
+                            <span class="progress-title">分析进度</span>
+                            <span class="progress-percentage">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <p class="progress-status">准备中...</p>
+                    </div>
+                    
+                    <div class="result-section" id="paradigm-result" style="display: none;">
+                        <div class="result-header">
+                            <h3>📝 分析结果</h3>
+                            <div class="result-actions">
+                                <button class="btn-icon" id="copy-paradigm" title="复制">📋</button>
+                                <button class="btn-icon" id="edit-paradigm" title="编辑">✏️</button>
+                                <button class="btn-icon" id="save-paradigm" title="保存">💾</button>
+                            </div>
+                        </div>
+                        <div class="result-content" id="paradigm-output" contenteditable="false"></div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary btn-prev" data-prev="1">← 上一步</button>
+                    <button class="btn btn-primary" id="analyze-btn" disabled>开始分析</button>
+                    <button class="btn btn-primary btn-next" id="step2-next" disabled>下一步：生成综述 →</button>
+                </div>
+            </section>
+
+            
+
+            <!-- 步骤3：定制化生成 (替换原有的step-3部分) -->
+            <section class="step-card" id="step-3">
+                <div class="card-header">
+                    <h2>✍️ 步骤3：定制化综述生成</h2>
+                    <p class="card-desc">设置综述主题，上传参考文献，AI将生成规范的综述内容</p>
+                </div>
+                <div class="card-body">
+                    <!-- 主题设置区域 -->
+                    <div class="topicsection">
+                        <div class="topic-header">
+                            <h4>📌 综述主题/标题 <span class="required">*必填</span></h4>
+                        </div>
+                        <div class="topic-input-wrapper">
+                            <input type="text" id="review-topic" class="topic-input" 
+                                placeholder="请输入综述的主题或标题，如：糖尿病患者的运动干预治疗研究进展"
+                                maxlength="200">
+                            <span class="char-count"><span id="topic-char-count">0</span>/200</span>
+                        </div>
+                        <p class="topic-hint">
+                            💡 示例：
+                            <span class="hint-example" onclick="setTopicExample(this)">人工智能在医学影像诊断中的应用研究进展</span>
+                            <span class="hint-example" onclick="setTopicExample(this)">新能源汽车电池技术发展综述</span>
+                        </p>
+                        
+                        <div class="topic-row">
+                            <div class="citation-format-section">
+                                <label>引用格式：</label>
+                                <select id="citation-format" class="form-select-inline">
+                                    <option value="gb">GB/T 7714（中国国家标准）</option>
+                                    <option value="apa">APA格式</option>
+                                    <option value="mla">MLA格式</option>
+                                    <option value="harvard">Harvard格式</option>
+                                </select>
+                            </div>
+                            <div class="section-select-inline">
+                                <label>生成部分：</label>
+                                <select id="section-select" class="form-select-inline">
+                                    <option value="full">📄 完整综述</option>
+                                    <option value="abstract">摘要</option>
+                                    <option value="introduction">引言</option>
+                                    <option value="methods">方法</option>
+                                    <option value="main_body">主体内容</option>
+                                    <option value="discussion">讨论</option>
+                                    <option value="conclusion">结论</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ===== 核心操作按钮区域（固定在顶部醒目位置）===== -->
+                    <div class="action-buttons-bar" id="action-buttons-bar">
+                        <div class="action-buttons-left">
+                            <div class="action-status" id="action-status">
+                                <span class="status-icon" id="action-status-icon">ℹ️</span>
+                                <span class="status-text" id="action-status-text">请先完成上述设置</span>
+                            </div>
+                        </div>
+                        <div class="action-buttons-right">
+                            <button class="btn btn-outline btn-action" id="generate-framework-btn">
+                                📋 生成框架
+                            </button>
+                            <button class="btn btn-primary btn-action" id="generate-content-btn">
+                                ✍️ 生成内容
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 两栏布局：左侧文献管理，右侧输出 -->
+                    <div class="generate-main-layout">
+                        <!-- 左侧：文献管理 -->
+                        <div class="literature-panel">
+                            <div class="panel-header">
+                                <h4>📄 参考文献</h4>
+                                <span class="panel-badge" id="lit-count-badge">0篇</span>
+                            </div>
+                            <p class="panel-desc">上传的文献将作为<strong>唯一引用来源</strong></p>
+                            
+                            <!-- 上传区域 -->
+                            <div class="lit-upload-area">
+                                <input type="file" id="lit-files" multiple accept=".pdf,.txt" hidden>
+                                <button class="btn btn-outline btn-block" onclick="document.getElementById('lit-files').click()">
+                                    📁 添加文献文件
+                                </button>
+                                <p class="upload-hint">支持 PDF、TXT，可多选</p>
+                            </div>
+                            
+                            <!-- 文件列表 -->
+                            <div class="lit-file-list" id="lit-file-list">
+                                <p class="empty-text">暂未上传文献</p>
+                            </div>
+                            
+                            <!-- 处理状态 -->
+                            <div class="lit-process-status" id="lit-process-status">
+                                <div class="process-status-content" id="process-status-content">
+                                    <span class="process-icon">📭</span>
+                                    <span class="process-text">等待上传文献</span>
+                                </div>
+                                <div class="process-progress" id="process-progress" style="display:none;">
+                                    <div class="mini-progress-bar">
+                                        <div class="mini-progress-fill" id="mini-progress-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 可引用文献列表 -->
+                            <div class="citable-list" id="citable-list" style="display:none;">
+                                <div class="citable-header">
+                                    <span>✅ 可引用文献</span>
+                                    <button class="btn-text-sm" id="clear-lit-btn">清空</button>
+                                </div>
+                                <div class="citable-items" id="citable-items"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧：输出区域 -->
+                        <div class="output-panel">
+                            <!-- 进度条 -->
+                            <div class="progress-container" id="generate-progress" style="display: none;">
+                                <div class="progress-header">
+                                    <span class="progress-title">生成进度</span>
+                                    <span class="progress-percentage">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill"></div>
+                                </div>
+                                <p class="progress-status">准备中...</p>
+                            </div>
+                            
+                            <!-- 引用提示 -->
+                            <div class="citation-notice" id="citation-notice" style="display:none;">
+                                📎 本次生成仅引用您上传的 <strong id="notice-count">0</strong> 篇文献
+                            </div>
+                            
+                            <!-- 输出标签页 -->
+                            <div class="output-tabs">
+                                <button class="output-tab active" data-target="framework-output">框架</button>
+                                <button class="output-tab" data-target="content-output">内容</button>
+                                <button class="output-tab" data-target="references-output">参考文献</button>
+                            </div>
+                            
+                            <div class="output-panes">
+                                <div class="output-pane active" id="framework-pane">
+                                    <div class="output-content" id="framework-output">
+                                        <p class="placeholder-text">点击上方"生成框架"按钮预览综述结构</p>
+                                    </div>
+                                </div>
+                                <div class="output-pane" id="content-pane">
+                                    <div class="output-content" id="content-output">
+                                        <p class="placeholder-text">点击上方"生成内容"按钮开始生成综述</p>
+                                    </div>
+                                    <div class="refine-input">
+                                        <textarea id="feedback-input" placeholder="输入修改意见..."></textarea>
+                                        <button class="btn btn-sm btn-primary" id="refine-btn">优化</button>
+                                    </div>
+                                </div>
+                                <div class="output-pane" id="references-pane">
+                                    <div class="output-content" id="references-output">
+                                        <p class="placeholder-text">生成内容后显示参考文献列表</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary btn-prev" data-prev="2">← 上一步</button>
+                    <button class="btn btn-primary btn-next" id="step3-next" disabled>下一步：导出结果 →</button>
+                </div>
+            </section>
+
+            <!-- 步骤4：导出 -->
+            <section class="step-card" id="step-4">
+                <div class="card-header">
+                    <h2>📤 步骤4：导出综述</h2>
+                    <p class="card-desc">将生成的综述导出为常用文档格式</p>
+                </div>
+                <div class="card-body">
+                    <div class="export-preview">
+                        <div class="export-preview-header">
+                            <h4>内容预览</h4>
+                            <span class="preview-topic" id="preview-topic"></span>
+                        </div>
+                        <div class="preview-content" id="export-preview">
+                            <p class="placeholder-text">暂无内容</p>
+                        </div>
+                    </div>
+                    
+                    <div class="citation-stats" id="citation-stats" style="display: none;">
+                        <h4>📊 引用统计</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-total-refs">0</span>
+                                <span class="stat-label">用户上传文献</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-cited-refs">0</span>
+                                <span class="stat-label">已引用文献</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-citation-count">0</span>
+                                <span class="stat-label">引用次数</span>
+                            </div>
+                        </div>
+                        <p class="stats-note">* 所有引用均来自您上传的文献，无外部来源</p>
+                    </div>
+                    
+                    <div class="export-options">
+                        <h4>选择导出格式</h4>
+                        <div class="export-cards">
+                            <div class="export-card" data-format="docx">
+                                <div class="export-icon">📝</div>
+                                <div class="export-name">Word文档</div>
+                                <div class="export-ext">.docx</div>
+                            </div>
+                            <div class="export-card" data-format="pdf">
+                                <div class="export-icon">📕</div>
+                                <div class="export-name">PDF文档</div>
+                                <div class="export-ext">.pdf</div>
+                            </div>
+                            <div class="export-card" data-format="markdown">
+                                <div class="export-icon">📋</div>
+                                <div class="export-name">Markdown</div>
+                                <div class="export-ext">.md</div>
+                            </div>
+                            <div class="export-card" data-format="html">
+                                <div class="export-icon">🌐</div>
+                                <div class="export-name">HTML网页</div>
+                                <div class="export-ext">.html</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="export-form">
+                        <div class="form-group">
+                            <label>文档标题</label>
+                            <input type="text" id="export-title" class="form-input" placeholder="自动使用综述主题">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary btn-prev" data-prev="3">← 上一步</button>
+                    <button class="btn btn-success" id="export-btn" disabled>导出文档</button>
+                    <button class="btn btn-outline" id="new-review-btn">开始新综述</button>
+                </div>
+            </section>
+        </main>
+
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
